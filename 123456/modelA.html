@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shape Puzzle Game</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background-color: #f0f0f0;
+      }
+      #game-container {
+        text-align: center;
+        max-width: 600px;
+        width: 100%;
+        padding: 20px;
+      }
+      #grid {
+        display: inline-grid;
+        gap: 5px;
+        padding: 10px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .cell {
+        width: 50px;
+        height: 50px;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        cursor: pointer;
+      }
+      .shape {
+        width: 40px;
+        height: 40px;
+        transition: transform 0.2s;
+      }
+      .shape:hover {
+        transform: scale(1.1);
+      }
+      #shapes-container {
+        margin-top: 20px;
+        display: flex;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      .shape-button {
+        margin: 5px;
+        padding: 10px;
+        border: none;
+        background-color: #f0f0f0;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .shape-button.selected {
+        background-color: #d0d0d0;
+      }
+      #info {
+        margin-top: 20px;
+      }
+      button {
+        margin: 5px;
+        padding: 10px 20px;
+        font-size: 16px;
+        cursor: pointer;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      #instructions {
+        margin-bottom: 20px;
+        padding: 10px;
+        background-color: #e6f7ff;
+        border-radius: 5px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="game-container">
+      <h1>Shape Puzzle Game</h1>
+      <div id="instructions"></div>
+      <div id="grid"></div>
+      <div id="shapes-container"></div>
+      <div id="info">
+        <p>Level: <span id="level">1</span></p>
+        <p>Time: <span id="timer">00:00</span></p>
+        <p>Points: <span id="points">0</span></p>
+      </div>
+      <button id="hint-btn">Hint</button>
+      <button id="next-level-btn" style="display: none">Next Level</button>
+    </div>
+
+    <script>
+      const gameContainer = document.getElementById('game-container');
+      const grid = document.getElementById('grid');
+      const shapesContainer = document.getElementById('shapes-container');
+      const levelSpan = document.getElementById('level');
+      const timerSpan = document.getElementById('timer');
+      const pointsSpan = document.getElementById('points');
+      const hintBtn = document.getElementById('hint-btn');
+      const nextLevelBtn = document.getElementById('next-level-btn');
+      const instructionsDiv = document.getElementById('instructions');
+
+      let currentLevel = 1;
+      let timer = 0;
+      let points = 0;
+      let timerInterval;
+      let selectedShape = null;
+
+      const levels = [
+        {
+          gridSize: 3,
+          shapes: ['circle', 'square', 'triangle'],
+          instructions:
+            '1. Click on a shape in the palette below to select it.\n2. Click on an empty cell in the grid to place the selected shape.\n3. Fill the entire 3x3 grid.\n4. Create a pattern where no shape appears more than once in any row or column.',
+        },
+        {
+          gridSize: 4,
+          shapes: ['circle', 'square', 'triangle', 'diamond'],
+          instructions:
+            '1. Select and place shapes as in the previous level.\n2. Fill the entire 4x4 grid.\n3. Create a pattern where each shape appears exactly once in every row and column.\n4. Ensure that no 2x2 area contains the same shape more than once.',
+        },
+        {
+          gridSize: 5,
+          shapes: ['circle', 'square', 'triangle', 'diamond', 'pentagon'],
+          instructions:
+            '1. Select and place shapes as before.\n2. Fill the entire 5x5 grid.\n3. Create a pattern where each shape appears exactly once in every row and column.\n4. Form at least one complete diagonal line (corner to corner) using a single shape type.\n5. Ensure no 3x3 area contains the same shape more than once.',
+        },
+      ];
+
+      function createShape(type) {
+        const shape = document.createElementNS(
+          'http://www.w3.org/2000/svg',
+          'svg'
+        );
+        shape.setAttribute('class', 'shape');
+        shape.setAttribute('viewBox', '0 0 100 100');
+
+        let path;
+        switch (type) {
+          case 'circle':
+            path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'circle'
+            );
+            path.setAttribute('cx', '50');
+            path.setAttribute('cy', '50');
+            path.setAttribute('r', '45');
+            path.setAttribute('fill', 'red');
+            break;
+          case 'square':
+            path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'rect'
+            );
+            path.setAttribute('x', '5');
+            path.setAttribute('y', '5');
+            path.setAttribute('width', '90');
+            path.setAttribute('height', '90');
+            path.setAttribute('fill', 'blue');
+            break;
+          case 'triangle':
+            path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'polygon'
+            );
+            path.setAttribute('points', '50,5 5,95 95,95');
+            path.setAttribute('fill', 'green');
+            break;
+          case 'diamond':
+            path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'polygon'
+            );
+            path.setAttribute('points', '50,5 95,50 50,95 5,50');
+            path.setAttribute('fill', 'purple');
+            break;
+          case 'pentagon':
+            path = document.createElementNS(
+              'http://www.w3.org/2000/svg',
+              'polygon'
+            );
+            path.setAttribute('points', '50,5 95,35 80,90 20,90 5,35');
+            path.setAttribute('fill', 'orange');
+            break;
+        }
+
+        shape.appendChild(path);
+        shape.dataset.type = type;
+        return shape;
+      }
+
+      function initLevel(level) {
+        grid.innerHTML = '';
+        shapesContainer.innerHTML = '';
+        grid.style.gridTemplateColumns = `repeat(${
+          levels[level - 1].gridSize
+        }, 1fr)`;
+
+        const cells = levels[level - 1].gridSize ** 2;
+        for (let i = 0; i < cells; i++) {
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.index = i;
+          cell.addEventListener('click', () => placeShape(cell));
+          grid.appendChild(cell);
+        }
+
+        levels[level - 1].shapes.forEach((shapeType) => {
+          const shapeButton = document.createElement('button');
+          shapeButton.className = 'shape-button';
+          shapeButton.appendChild(createShape(shapeType));
+          shapeButton.addEventListener('click', () =>
+            selectShape(shapeType, shapeButton)
+          );
+          shapesContainer.appendChild(shapeButton);
+        });
+
+        levelSpan.textContent = level;
+        timer = 0;
+        updateTimer();
+        clearInterval(timerInterval);
+        timerInterval = setInterval(updateTimer, 1000);
+
+        nextLevelBtn.style.display = 'none';
+
+        // Update instructions
+        instructionsDiv.innerHTML = levels[level - 1].instructions.replace(
+          /\n/g,
+          '<br>'
+        );
+      }
+
+      function selectShape(shapeType, button) {
+        selectedShape = shapeType;
+        document
+          .querySelectorAll('.shape-button')
+          .forEach((btn) => btn.classList.remove('selected'));
+        button.classList.add('selected');
+      }
+
+      function placeShape(cell) {
+        if (selectedShape && !cell.hasChildNodes()) {
+          const shape = createShape(selectedShape);
+          cell.appendChild(shape);
+          checkCompletion();
+        }
+      }
+
+      function checkCompletion() {
+        const filledCells = grid.querySelectorAll('.cell:not(:empty)');
+        if (filledCells.length === levels[currentLevel - 1].gridSize ** 2) {
+          clearInterval(timerInterval);
+          calculatePoints();
+          nextLevelBtn.style.display = 'inline-block';
+        }
+      }
+
+      function calculatePoints() {
+        const basePoints = 1000;
+        const timeBonus = Math.max(0, 300 - timer);
+        points += basePoints + timeBonus;
+        pointsSpan.textContent = points;
+      }
+
+      function updateTimer() {
+        timer++;
+        const minutes = Math.floor(timer / 60)
+          .toString()
+          .padStart(2, '0');
+        const seconds = (timer % 60).toString().padStart(2, '0');
+        timerSpan.textContent = `${minutes}:${seconds}`;
+      }
+
+      function showHint() {
+        const emptyCells = grid.querySelectorAll('.cell:empty');
+        if (emptyCells.length > 0) {
+          const randomCell =
+            emptyCells[Math.floor(Math.random() * emptyCells.length)];
+          const hintShape = createShape(
+            levels[currentLevel - 1].shapes[
+              Math.floor(Math.random() * levels[currentLevel - 1].shapes.length)
+            ]
+          );
+          hintShape.style.opacity = '0.5';
+          randomCell.appendChild(hintShape);
+          setTimeout(() => randomCell.removeChild(hintShape), 2000);
+        }
+      }
+
+      hintBtn.addEventListener('click', showHint);
+
+      nextLevelBtn.addEventListener('click', () => {
+        currentLevel++;
+        if (currentLevel <= levels.length) {
+          initLevel(currentLevel);
+        } else {
+          alert('Congratulations! You completed all levels!');
+        }
+      });
+
+      initLevel(currentLevel);
+    </script>
+  </body>
+</html>
